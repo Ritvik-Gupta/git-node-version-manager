@@ -37,6 +37,7 @@ func NewTuiApplicaition(repositories map[string]utils.Repository, packagesRequir
 }
 
 func (data *TuiApplication) Start() {
+	crateTempRepoStore()
 	defer clearDownloadedRepos()
 
 	currentPage := 0
@@ -68,6 +69,10 @@ func (data *TuiApplication) Start() {
 	if err := data.application.SetRoot(data.pages, true).SetFocus(data.pages).Run(); err != nil {
 		panic(err)
 	}
+}
+
+func crateTempRepoStore() {
+	os.Mkdir("./downloaded-repos", os.ModeTemporary)
 }
 
 func clearDownloadedRepos() {
