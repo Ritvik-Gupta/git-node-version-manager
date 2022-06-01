@@ -54,6 +54,10 @@ func (pkg *Package) GetVersion() string {
 }
 
 func (pkg *Package) VersionRankComparedTo(pkgReq *Package) int {
+	if pkg.Name == "" {
+		return -4
+	}
+
 	if pkg.MajorVersion > pkgReq.MajorVersion {
 		return 3
 	} else if pkg.MajorVersion < pkgReq.MajorVersion {
