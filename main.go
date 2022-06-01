@@ -1,31 +1,83 @@
-// package main
+package main
 
-// import (
-// 	"io/ioutil"
-// 	"os"
-// )
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
 
-// func main() {
-// 	os.Chdir("./downloaded-repos")
+	"github.com/Ritvik-Gupta/git-node-version-manager/parser"
+	"github.com/Ritvik-Gupta/git-node-version-manager/tui"
+	"github.com/Ritvik-Gupta/git-node-version-manager/utils"
+	"github.com/urfave/cli/v2"
+)
 
-// 	file, err := os.Open("./dyte-sample-app-backend/package.json")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	bytes, err := ioutil.ReadAll(file)
-// 	println(string(bytes))
+func readRepositories(inputFile string, rawReporitories []string) (map[string]utils.Repository, error) {
+	repositories := make(map[string]utils.Repository)
 
-// 	// var buffer bytes.Buffer
+	err := parser.NewCsvParser(inputFile).ParseWriteInto(repositories)
+	if err != nil {
+		return nil, err
+	}
 
-// 	// cmd := exec.Command("node", "--version")
+	err = parser.NewRawParser(rawReporitories).ParseWriteInto(repositories)
+	if err != nil {
+		return nil, err
+	}
 
-// 	// cmd.Stdout = &buffer
+	return repositories, nil
+}
 
-// 	// if err := cmd.Run(); err != nil {
-// 	// 	fmt.Println(err.Error())
-// 	// 	return
-// 	// }
+func main() {
+	app := &cli.App{
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "input",
+				Aliases: []string{"i"},
+				Value:   "example.csv",
+				Usage:   "Input `CSV|TXT File` for Repositories",
+			},
+			&cli.StringSliceFlag{
+				Name:    "repositories",
+				Aliases: []string{"r"},
+				Usage:   "Provide `REPOS` as an array",
+			},
+		},
+		Action: func(ctx *cli.Context) error {
+			if ctx.NArg() == 0 {
+				return cli.Exit("No Package Names Provided", 86)
+			}
 
-// 	// fmt.Printf("%s\n", buffer.String())
+			packages := make([]utils.Package, 0, ctx.NArg())
+			for i := 0; i < ctx.NArg(); i++ {
+				pkg, err := utils.ParsePackage(ctx.Args().Get(i))
+				if err != nil {
+					return err
+				}
 
-// }
+				packages = append(packages, pkg)
+			}
+
+			fmt.Println(packages)
+			fmt.Println(ctx.String("input"))
+			fmt.Println(ctx.StringSlice("repositories"))
+
+			repositories, err := readRepositories(ctx.String("input"), ctx.StringSlice("repositories"))
+			if err != nil {
+				return err
+			}
+
+			b, _ := json.MarshalIndent(repositories, "", " ")
+			fmt.Println(string(b))
+
+			tui.NewTuiApplicaition(repositories, packages).Start()
+
+			return nil
+		},
+	}
+
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
